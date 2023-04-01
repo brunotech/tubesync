@@ -20,12 +20,6 @@ def parse_database_connection_string(database_connection_string):
         'postgresql': 'django.db.backends.postgresql',
         'mysql': 'django.db.backends.mysql',
     }
-    backend_options = {
-        'postgresql': {},
-        'mysql': {
-            'charset': 'utf8mb4',
-        }
-    }
     try:
         parts = urlparse(str(database_connection_string))
     except Exception as e:
@@ -41,13 +35,15 @@ def parse_database_connection_string(database_connection_string):
     django_driver = django_backends.get(driver)
     host_parts = user_pass_host_port.split('@')
     if len(host_parts) != 2:
-        raise DatabaseConnectionError(f'Database connection string netloc must be in '
-                                      f'the format of user:pass@host')
+        raise DatabaseConnectionError(
+            'Database connection string netloc must be in the format of user:pass@host'
+        )
     user_pass, host_port = host_parts
     user_pass_parts = user_pass.split(':')
     if len(user_pass_parts) != 2:
-        raise DatabaseConnectionError(f'Database connection string netloc must be in '
-                                      f'the format of user:pass@host')
+        raise DatabaseConnectionError(
+            'Database connection string netloc must be in the format of user:pass@host'
+        )
     username, password = user_pass_parts
     host_port_parts = host_port.split(':')
     if len(host_port_parts) == 1:
@@ -69,16 +65,24 @@ def parse_database_connection_string(database_connection_string):
                                           f'65535, got {port}')
     else:
         # Malformed
-        raise DatabaseConnectionError(f'Database connection host must be a hostname or '
-                                      f'a hostname:port combination')
+        raise DatabaseConnectionError(
+            'Database connection host must be a hostname or a hostname:port combination'
+        )
     if database.startswith('/'):
         database = database[1:]
     if not database:
-        raise DatabaseConnectionError(f'Database connection string path must be a '
-                                      f'string in the format of /databasename')    
+        raise DatabaseConnectionError(
+            'Database connection string path must be a string in the format of /databasename'
+        )
     if '/' in database:
         raise DatabaseConnectionError(f'Database connection string path can only '
                                       f'contain a single string name, got: {database}')
+    backend_options = {
+        'postgresql': {},
+        'mysql': {
+            'charset': 'utf8mb4',
+        }
+    }
     return {
         'DRIVER': driver,
         'ENGINE': django_driver,
@@ -93,12 +97,11 @@ def parse_database_connection_string(database_connection_string):
 
 
 def get_client_ip(request):
-    x_forwarded_for = request.META.get('HTTP_X_FORWARDED_FOR')
-    if x_forwarded_for:
-        ip = x_forwarded_for.split(',')[0]
-    else:
-        ip = request.META.get('REMOTE_ADDR')
-    return ip
+    return (
+        x_forwarded_for.split(',')[0]
+        if (x_forwarded_for := request.META.get('HTTP_X_FORWARDED_FOR'))
+        else request.META.get('REMOTE_ADDR')
+    )
 
 
 def append_uri_params(uri, params):

@@ -253,9 +253,7 @@ class ValidateSourceView(FormView):
                     error=e.message)
                 )
             )
-        if form.errors:
-            return super().form_invalid(form)
-        return super().form_valid(form)
+        return super().form_invalid(form) if form.errors else super().form_valid(form)
 
     def get_success_url(self):
         url = reverse_lazy('sync:add-source')
@@ -295,14 +293,11 @@ class AddSourceView(CreateView):
         source_type = request.GET.get('source_type', '')
         if source_type and source_type in Source.SOURCE_TYPES:
             self.prepopulated_data['source_type'] = source_type
-        key = request.GET.get('key', '')
-        if key:
+        if key := request.GET.get('key', ''):
             self.prepopulated_data['key'] = key.strip()
-        name = request.GET.get('name', '')
-        if name:
+        if name := request.GET.get('name', ''):
             self.prepopulated_data['name'] = slugify(name)
-        directory = request.GET.get('directory', '')
-        if directory:
+        if directory := request.GET.get('directory', ''):
             self.prepopulated_data['directory'] = slugify(directory)
         return super().dispatch(request, *args, **kwargs)
 
@@ -322,9 +317,7 @@ class AddSourceView(CreateView):
                 'media_format',
                 ValidationError(self.errors['invalid_media_format'])
             )
-        if form.errors:
-            return super().form_invalid(form)
-        return super().form_valid(form)
+        return super().form_invalid(form) if form.errors else super().form_valid(form)
 
     def get_success_url(self):
         url = reverse_lazy('sync:source', kwargs={'pk': self.object.pk})
@@ -388,9 +381,7 @@ class UpdateSourceView(UpdateView):
                 'media_format',
                 ValidationError(self.errors['invalid_media_format'])
             )
-        if form.errors:
-            return super().form_invalid(form)
-        return super().form_valid(form)
+        return super().form_invalid(form) if form.errors else super().form_valid(form)
 
     def get_success_url(self):
         url = reverse_lazy('sync:source', kwargs={'pk': self.object.pk})
@@ -410,7 +401,7 @@ class DeleteSourceView(DeleteView, FormMixin):
 
     def post(self, request, *args, **kwargs):
         delete_media_val = request.POST.get('delete_media', False)
-        delete_media = True if delete_media_val is not False else False
+        delete_media = delete_media_val is not False
         if delete_media:
             source = self.get_object()
             for media in Media.objects.filter(source=source):
@@ -446,8 +437,7 @@ class MediaView(ListView):
         super().__init__(*args, **kwargs)
 
     def dispatch(self, request, *args, **kwargs):
-        filter_by = request.GET.get('filter', '')
-        if filter_by:
+        if filter_by := request.GET.get('filter', ''):
             try:
                 self.filter_source = Source.objects.get(pk=filter_by)
             except Source.DoesNotExist:
@@ -459,15 +449,15 @@ class MediaView(ListView):
 
     def get_queryset(self):
         if self.filter_source:
-            if self.show_skipped:
-                q = Media.objects.filter(source=self.filter_source)
-            else:
-                q = Media.objects.filter(source=self.filter_source, skip=False)
+            q = (
+                Media.objects.filter(source=self.filter_source)
+                if self.show_skipped
+                else Media.objects.filter(source=self.filter_source, skip=False)
+            )
+        elif self.show_skipped:
+            q = Media.objects.all()
         else:
-            if self.show_skipped:
-                q = Media.objects.all()
-            else:
-                q = Media.objects.filter(skip=False)
+            q = Media.objects.filter(skip=False)
         return q.order_by('-published', '-created')
 
     def get_context_data(self, *args, **kwargs):
@@ -741,8 +731,7 @@ class CompletedTasksView(ListView):
         super().__init__(*args, **kwargs)
 
     def dispatch(self, request, *args, **kwargs):
-        filter_by = request.GET.get('filter', '')
-        if filter_by:
+        if filter_by := request.GET.get('filter', ''):
             try:
                 self.filter_source = Source.objects.get(pk=filter_by)
             except Source.DoesNotExist:
@@ -1019,10 +1008,7 @@ class UpdateMediaServerView(FormView, SingleObjectMixin):
                  f'{self.object.host}:{self.object.port}')
             )
         # Check if saving caused any errors
-        if form.errors:
-            return super().form_invalid(form)
-        # All good!
-        return super().form_valid(form)
+        return super().form_invalid(form) if form.errors else super().form_valid(form)
 
     def get_context_data(self, *args, **kwargs):
         data = super().get_context_data(*args, **kwargs)

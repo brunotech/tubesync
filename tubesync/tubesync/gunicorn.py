@@ -18,7 +18,7 @@ def get_num_workers():
 def get_bind():
     host = os.getenv('LISTEN_HOST', '127.0.0.1')
     port = os.getenv('LISTEN_PORT', '8080')
-    return '{}:{}'.format(host, port)
+    return f'{host}:{port}'
 
 
 workers = get_num_workers()

@@ -54,10 +54,10 @@ def map_task_to_instance(task):
     }
     # Unpack 
     task_func, task_args_str = task.task_name, task.task_params
-    model = TASK_MAP.get(task_func, None)
+    model = TASK_MAP.get(task_func)
     if not model:
         return None, None
-    url = MODEL_URL_MAP.get(model, None)
+    url = MODEL_URL_MAP.get(model)
     if not url:
         return None, None
     try:
@@ -92,9 +92,7 @@ def get_error_message(task):
     if len(stacktrace_lines) == 0:
         return ''
     error_message = stacktrace_lines[-1].strip()
-    if ':' not in error_message:
-        return ''
-    return error_message.split(':', 1)[1].strip()
+    return error_message.split(':', 1)[1].strip() if ':' in error_message else ''
 
 
 def get_source_completed_tasks(source_id, only_errors=False):
@@ -226,40 +224,32 @@ def download_media_metadata(media_id):
     source = media.source
     metadata = media.index_metadata()
     media.metadata = json.dumps(metadata, default=json_serial)
-    upload_date = media.upload_date
-    # Media must have a valid upload date
-    if upload_date:
+    if upload_date := media.upload_date:
         media.published = timezone.make_aware(upload_date)
     else:
         log.error(f'Media has no upload date, skipping: {source} / {media}')
         media.skip = True
-    # If the source has a download cap date check the upload date is allowed
-    max_cap_age = source.download_cap_date
-    if max_cap_age:
+    if max_cap_age := source.download_cap_date:
         if media.published < max_cap_age:
             # Media was published after the cap date, skip it
             log.warn(f'Media: {source} / {media} is older than cap age '
                      f'{max_cap_age}, skipping')
             media.skip = True
-    # If the source has a cut-off check the upload date is within the allowed delta
     if source.delete_old_media and source.days_to_keep > 0:
-        if not isinstance(media.published, datetime):
-            # Media has no known published date or incomplete metadata
-            log.warn(f'Media: {source} / {media} has no published date, skipping')
-            media.skip = True
-        else:
+        if isinstance(media.published, datetime):
             delta = timezone.now() - timedelta(days=source.days_to_keep)
             if media.published < delta:
                 # Media was published after the cutoff date, skip it
                 log.warn(f'Media: {source} / {media} is older than '
                          f'{source.days_to_keep} days, skipping')
                 media.skip = True
+        else:
+            # Media has no known published date or incomplete metadata
+            log.warn(f'Media: {source} / {media} has no published date, skipping')
+            media.skip = True
     # Check we can download the media item
     if not media.skip:
-        if media.get_format_str():
-            media.can_download = True
-        else:
-            media.can_download = False
+        media.can_download = bool(media.get_format_str())
     # Save the media
     media.save()
     log.info(f'Saved {len(media.metadata)} bytes of metadata for: '
@@ -327,12 +317,11 @@ def download_media(media_id):
         return
     max_cap_age = media.source.download_cap_date
     published = media.published
-    if max_cap_age and published:
-        if published <= max_cap_age:
-            log.warn(f'Download task triggered media: {media} (UUID: {media.pk}) but '
-                     f'the source has a download cap and the media is now too old, '
-                     f'not downloading')
-            return
+    if max_cap_age and published and published <= max_cap_age:
+        log.warn(f'Download task triggered media: {media} (UUID: {media.pk}) but '
+                 f'the source has a download cap and the media is now too old, '
+                 f'not downloading')
+        return
     filepath = media.filepath
     log.info(f'Downloading media: {media} (UUID: {media.pk}) to: "{filepath}"')
     format_str, container = media.download_media()
@@ -386,7 +375,7 @@ def download_media(media_id):
             write_text_file(media.nfopath, media.nfoxml)
         # Schedule a task to update media servers
         for mediaserver in MediaServer.objects.all():
-            log.info(f'Scheduling media server updates')
+            log.info('Scheduling media server updates')
             verbose_name = _('Request media server rescan for "{}"')
             rescan_media_server(
                 str(mediaserver.pk),

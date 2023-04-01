@@ -75,9 +75,7 @@ def resize_image_to_height(image, width, height):
     image = image.convert('RGB')
     ratio = image.width / image.height
     scaled_width = math.ceil(height * ratio)
-    if scaled_width < width:
-        # Width too small, stretch it
-        scaled_width = width
+    scaled_width = max(scaled_width, width)
     image = image.resize((scaled_width, height), Image.ANTIALIAS)
     if scaled_width > width:
         # Width too large, crop it
@@ -100,12 +98,14 @@ def file_is_editable(filepath):
         os.path.commonpath([os.path.abspath(str(settings.DOWNLOAD_ROOT))]),
     )
     filepath = os.path.abspath(str(filepath))
-    if not os.path.isfile(filepath):
-        return False
-    for allowed_path in allowed_paths:
-        if allowed_path == os.path.commonpath([allowed_path, filepath]):
-            return True
-    return False
+    return (
+        any(
+            allowed_path == os.path.commonpath([allowed_path, filepath])
+            for allowed_path in allowed_paths
+        )
+        if os.path.isfile(filepath)
+        else False
+    )
 
 
 def write_text_file(filepath, filedata):
@@ -117,9 +117,7 @@ def write_text_file(filepath, filedata):
 
 
 def delete_file(filepath):
-    if file_is_editable(filepath):
-        return os.remove(filepath)
-    return False
+    return os.remove(filepath) if file_is_editable(filepath) else False
 
 
 def seconds_to_timestr(seconds):
@@ -139,18 +137,12 @@ def parse_media_format(format_dict):
     '''
     vcodec_full = format_dict.get('vcodec', '')
     vcodec_parts = vcodec_full.split('.')
-    if len(vcodec_parts) > 0:
-        vcodec = vcodec_parts[0].strip().upper()
-    else:
-        vcodec = None
+    vcodec = vcodec_parts[0].strip().upper() if len(vcodec_parts) > 0 else None
     if vcodec == 'NONE':
         vcodec = None
     acodec_full = format_dict.get('acodec', '')
     acodec_parts = acodec_full.split('.')
-    if len(acodec_parts) > 0:
-        acodec = acodec_parts[0].strip().upper()
-    else:
-        acodec = None
+    acodec = acodec_parts[0].strip().upper() if len(acodec_parts) > 0 else None
     if acodec == 'NONE':
         acodec = None
     try:
@@ -179,10 +171,7 @@ def parse_media_format(format_dict):
     if 'DASH' in format_str:
         is_hls = False
         is_dash = True
-        if height > 0:
-            format_str = f'{height}P'
-        else:
-            format_str = None
+        format_str = f'{height}P' if height > 0 else None
     return {
         'id': format_dict.get('format_id', ''),
         'format': format_str,

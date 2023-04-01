@@ -13,10 +13,8 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
         log.info('Building directory to Source map...')
-        dirmap = {}
-        for s in Source.objects.all():
-            dirmap[s.directory_path] = s
-        log.info(f'Scanning sources...')
+        dirmap = {s.directory_path: s for s in Source.objects.all()}
+        log.info('Scanning sources...')
         file_extensions = list(Source.EXTENSIONS) + self.extra_extensions
         for sourceroot, source in dirmap.items():
             media = list(Media.objects.filter(source=source, downloaded=False,

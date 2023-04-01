@@ -112,9 +112,9 @@ class PlexMediaServer(MediaServer):
             if 400 <= response.status_code < 500:
                 check_token = (' A 4XX error could mean your access token is being '
                                'rejected. Check your token is correct.')
-            raise ValidationError(f'Your Plex Media Server returned an invalid HTTP '
-                                  f'status code, expected 200 but received '
-                                  f'{response.status_code}.' + check_token)
+            raise ValidationError(
+                f'Your Plex Media Server returned an invalid HTTP status code, expected 200 but received {response.status_code}.{check_token}'
+            )
         try:
             parsed_response = ElementTree.fromstring(response.content)
         except Exception as e:
@@ -133,11 +133,10 @@ class PlexMediaServer(MediaServer):
             raise ValidationError(f'Your Plex Media Server returned unexpected data, '
                                   f'the XML it returned could not be parsed and the '
                                   f'error was "{e}"')
-        # Validate the library IDs
-        remote_libraries_desc = []
-        for remote_library_id, remote_library_name in remote_libraries.items():
-            remote_libraries_desc.append(f'"{remote_library_name}" with ID '
-                                         f'"{remote_library_id}"')
+        remote_libraries_desc = [
+            f'"{remote_library_name}" with ID "{remote_library_id}"'
+            for remote_library_id, remote_library_name in remote_libraries.items()
+        ]
         remote_libraries_str = ', '.join(remote_libraries_desc)
         for library_id in libraries:
             library_id = library_id.strip()
