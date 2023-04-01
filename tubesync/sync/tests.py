@@ -106,7 +106,7 @@ class FrontEndTestCase(TestCase):
             }
         }
         c = Client()
-        for source_type in test_sources.keys():
+        for source_type in test_sources:
             response = c.get(f'/source-validate/{source_type}')
             self.assertEqual(response.status_code, 200)
         response = c.get('/source-validate/invalid')
@@ -178,8 +178,7 @@ class FrontEndTestCase(TestCase):
         self.assertEqual(response.status_code, 302)
         url_parts = urlsplit(response.url)
         url_path = str(url_parts.path).strip()
-        if url_path.startswith('/'):
-            url_path = url_path[1:]
+        url_path = url_path.removeprefix('/')
         path_parts = url_path.split('/')
         self.assertEqual(path_parts[0], 'source')
         source_uuid = path_parts[1]
@@ -219,8 +218,7 @@ class FrontEndTestCase(TestCase):
         self.assertEqual(response.status_code, 302)
         url_parts = urlsplit(response.url)
         url_path = str(url_parts.path).strip()
-        if url_path.startswith('/'):
-            url_path = url_path[1:]
+        url_path = url_path.removeprefix('/')
         path_parts = url_path.split('/')
         self.assertEqual(path_parts[0], 'source')
         source_uuid = path_parts[1]
@@ -248,8 +246,7 @@ class FrontEndTestCase(TestCase):
         self.assertEqual(response.status_code, 302)
         url_parts = urlsplit(response.url)
         url_path = str(url_parts.path).strip()
-        if url_path.startswith('/'):
-            url_path = url_path[1:]
+        url_path = url_path.removeprefix('/')
         path_parts = url_path.split('/')
         self.assertEqual(path_parts[0], 'source')
         source_uuid = path_parts[1]
@@ -522,11 +519,13 @@ class FilepathTestCase(TestCase):
         self.assertEqual(self.source.get_example_media_format(),
                          'test-' + timezone.now().strftime('%d'))
         self.source.media_format = 'test-{source}'
-        self.assertEqual(self.source.get_example_media_format(),
-                         'test-' + self.source.slugname)
+        self.assertEqual(
+            self.source.get_example_media_format(), f'test-{self.source.slugname}'
+        )
         self.source.media_format = 'test-{source_full}'
-        self.assertEqual(self.source.get_example_media_format(),
-                         'test-' + self.source.name)
+        self.assertEqual(
+            self.source.get_example_media_format(), f'test-{self.source.name}'
+        )
         self.source.media_format = 'test-{title}'
         self.assertEqual(self.source.get_example_media_format(),
                          'test-some-media-title-name')
@@ -543,11 +542,14 @@ class FilepathTestCase(TestCase):
         self.assertEqual(self.source.get_example_media_format(),
                          'test-Some Playlist Title')
         self.source.media_format = 'test-{ext}'
-        self.assertEqual(self.source.get_example_media_format(),
-                         'test-' + self.source.extension)
+        self.assertEqual(
+            self.source.get_example_media_format(), f'test-{self.source.extension}'
+        )
         self.source.media_format = 'test-{resolution}'
-        self.assertEqual(self.source.get_example_media_format(),
-                         'test-' + self.source.source_resolution)
+        self.assertEqual(
+            self.source.get_example_media_format(),
+            f'test-{self.source.source_resolution}',
+        )
         self.source.media_format = 'test-{height}'
         self.assertEqual(self.source.get_example_media_format(),
                          'test-720')
@@ -555,11 +557,15 @@ class FilepathTestCase(TestCase):
         self.assertEqual(self.source.get_example_media_format(),
                          'test-1280')
         self.source.media_format = 'test-{vcodec}'
-        self.assertEqual(self.source.get_example_media_format(),
-                         'test-' + self.source.source_vcodec.lower())
+        self.assertEqual(
+            self.source.get_example_media_format(),
+            f'test-{self.source.source_vcodec.lower()}',
+        )
         self.source.media_format = 'test-{acodec}'
-        self.assertEqual(self.source.get_example_media_format(),
-                         'test-' + self.source.source_acodec.lower())
+        self.assertEqual(
+            self.source.get_example_media_format(),
+            f'test-{self.source.source_acodec.lower()}',
+        )
         self.source.media_format = 'test-{fps}'
         self.assertEqual(self.source.get_example_media_format(),
                          'test-24')

@@ -331,10 +331,7 @@ class Source(models.Model):
     @property
     def download_cap_date(self):
         delta = self.download_cap
-        if delta > 0:
-            return timezone.now() - timedelta(seconds=delta)
-        else:
-            return False
+        return timezone.now() - timedelta(seconds=delta) if delta > 0 else False
 
     @property
     def extension(self):
@@ -345,24 +342,23 @@ class Source(models.Model):
             people. All video is set to mkv containers, audio-only is set to m4a or ogg
             depending on audio codec.
         '''
-        if self.is_audio:
-            if self.source_acodec == self.SOURCE_ACODEC_MP4A:
-                return self.EXTENSION_M4A
-            elif self.source_acodec == self.SOURCE_ACODEC_OPUS:
-                return self.EXTENSION_OGG
-            else:
-                raise ValueError('Unable to choose audio extension, uknown acodec')
-        else:
+        if not self.is_audio:
             return self.EXTENSION_MKV
+        if self.source_acodec == self.SOURCE_ACODEC_MP4A:
+            return self.EXTENSION_M4A
+        elif self.source_acodec == self.SOURCE_ACODEC_OPUS:
+            return self.EXTENSION_OGG
+        else:
+            raise ValueError('Unable to choose audio extension, uknown acodec')
 
     @classmethod
-    def create_url(obj, source_type, key):
-        url = obj.URLS.get(source_type)
+    def create_url(cls, source_type, key):
+        url = cls.URLS.get(source_type)
         return url.format(key=key)
 
     @classmethod
-    def create_index_url(obj, source_type, key):
-        url = obj.INDEX_URLS.get(source_type)
+    def create_index_url(cls, source_type, key):
+        url = cls.INDEX_URLS.get(source_type)
         return url.format(key=key)
 
     @property
@@ -443,13 +439,13 @@ class Source(models.Model):
             'format': '-'.join(fmt),
             'playlist_title': 'Some Playlist Title',
             'ext': self.extension,
-            'resolution': self.source_resolution if self.source_resolution else '',
+            'resolution': self.source_resolution or '',
             'height': '720' if self.source_resolution else '',
             'width': '1280' if self.source_resolution else '',
             'vcodec': self.source_vcodec.lower() if self.source_vcodec else '',
             'acodec': self.source_acodec.lower(),
             'fps': '24' if self.source_resolution else '',
-            'hdr': 'hdr' if self.source_resolution else ''
+            'hdr': 'hdr' if self.source_resolution else '',
         }
 
     def get_example_media_format(self):
@@ -466,9 +462,7 @@ class Source(models.Model):
         if not callable(indexer):
             raise Exception(f'Source type f"{self.source_type}" has no indexer')
         response = indexer(self.index_url)
-        if not isinstance(response, dict):
-            return []
-        return response.get('entries', [])
+        return response.get('entries', []) if isinstance(response, dict) else []
 
 
 def get_media_thumb_path(instance, filename):
@@ -775,21 +769,18 @@ class Media(models.Model):
         '''
         if self.source.is_audio:
             audio_match, audio_format = self.get_best_audio_format()
-            if audio_format:
-                return str(audio_format)
-            else:
-                return False
+            return str(audio_format) if audio_format else False
         else:
             combined_match, combined_format = self.get_best_combined_format()
             if combined_format:
                 return str(combined_format)
-            else:
-                audio_match, audio_format = self.get_best_audio_format()
-                video_match, video_format = self.get_best_video_format()
-                if audio_format and video_format:
-                    return f'{video_format}+{audio_format}'
-                else:
-                    return False
+            audio_match, audio_format = self.get_best_audio_format()
+            video_match, video_format = self.get_best_video_format()
+            return (
+                f'{video_format}+{audio_format}'
+                if audio_format and video_format
+                else False
+            )
         return False
     
     def get_display_format(self, format_str):
@@ -898,10 +889,9 @@ class Media(models.Model):
         '''
             Matches a format code, such as '22', to a processed format dict.
         '''
-        for fmt in self.iter_formats():
-            if format_code == fmt['id']:
-                return fmt
-        return False
+        return next(
+            (fmt for fmt in self.iter_formats() if format_code == fmt['id']), False
+        )
 
     @property
     def format_dict(self):
@@ -911,7 +901,7 @@ class Media(models.Model):
         '''
         format_str = self.get_format_str()
         display_format = self.get_display_format(format_str)
-        dateobj = self.upload_date if self.upload_date else self.created
+        dateobj = self.upload_date or self.created
         return {
             'yyyymmdd': dateobj.strftime('%Y%m%d'),
             'yyyy_mm_dd': dateobj.strftime('%Y-%m-%d'),
@@ -943,9 +933,7 @@ class Media(models.Model):
     def loaded_metadata(self):
         try:
             data = json.loads(self.metadata)
-            if not isinstance(data, dict):
-                return {}
-            return data
+            return data if isinstance(data, dict) else {}
         except Exception as e:
             return {}
 
@@ -977,7 +965,7 @@ class Media(models.Model):
     @property
     def name(self):
         title = self.title
-        return title if title else self.key
+        return title or self.key
 
     @property
     def upload_date(self):
@@ -999,9 +987,7 @@ class Media(models.Model):
     @property
     def duration_formatted(self):
         duration = self.duration
-        if duration > 0:
-            return seconds_to_timestr(duration)
-        return '??:??:??'
+        return seconds_to_timestr(duration) if duration > 0 else '??:??:??'
 
     @property
     def categories(self):
@@ -1086,15 +1072,11 @@ class Media(models.Model):
 
     @property
     def thumb_file_exists(self):
-        if not self.thumb:
-            return False
-        return os.path.exists(self.thumb.path)
+        return os.path.exists(self.thumb.path) if self.thumb else False
 
     @property
     def media_file_exists(self):
-        if not self.media_file:
-            return False
-        return os.path.exists(self.media_file.path)
+        return os.path.exists(self.media_file.path) if self.media_file else False
 
     @property
     def nfoxml(self):
@@ -1205,9 +1187,11 @@ class Media(models.Model):
                 return self.STATE_SCHEDULED
         if self.skip:
             return self.STATE_SKIPPED
-        if not self.source.download_media:
-            return self.STATE_DISABLED_AT_SOURCE
-        return self.STATE_UNKNOWN
+        return (
+            self.STATE_UNKNOWN
+            if self.source.download_media
+            else self.STATE_DISABLED_AT_SOURCE
+        )
 
     def get_download_state_icon(self, task=None):
         state = self.get_download_state(task)

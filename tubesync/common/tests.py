@@ -58,8 +58,7 @@ class CommonStaticTestCase(TestCase):
         if url_parts[0] == root_parts[-1]:
             del root_parts[-1]
             del url_parts[0]
-        root_parts.append('common')
-        root_parts.append('static')
+        root_parts.extend(('common', 'static'))
         favicon_real_path = os.path.join(os.sep.join(root_parts),
                                          os.sep.join(url_parts))
         self.assertTrue(os.path.exists(favicon_real_path))

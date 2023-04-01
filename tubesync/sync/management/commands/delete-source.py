@@ -37,7 +37,7 @@ class Command(BaseCommand):
         source.delete()
         # Update any media servers
         for mediaserver in MediaServer.objects.all():
-            log.info(f'Scheduling media server updates')
+            log.info('Scheduling media server updates')
             verbose_name = _('Request media server rescan for "{}"')
             rescan_media_server(
                 str(mediaserver.pk),

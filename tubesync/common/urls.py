@@ -8,7 +8,7 @@ from .views import error403, error404, error500, HealthCheckView
 
 app_name = 'common'
 robots_view = HttpResponse(settings.ROBOTS, content_type='text/plain')
-favicon_uri = settings.STATIC_URL + 'images/favicon.ico'
+favicon_uri = f'{settings.STATIC_URL}images/favicon.ico'
 favicon_view = RedirectView.as_view(url=favicon_uri, permanent=False)
 
 
